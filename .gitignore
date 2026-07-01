@@ -1,0 +1,29 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# App logs and local SQLite databases
+*.log
+app.log
+*.db
+database.db
+
+# Large local NLTK downloaded datasets
+nltk_data/
+
+# IDE files
+.vscode/
+.idea/
+.agents/
+.gemini/
+
+# OS files
+.DS_Store
+Thumbs.db

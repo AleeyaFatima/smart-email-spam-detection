@@ -1,0 +1,17 @@
+.venv
+__pycache__
+.git
+.gitignore
+.agents
+.gemini
+app.log
+
+# Exclude unused large models to fit within Vercel's size limits
+models/logistic_regression_tf_idf.pkl
+models/logistic_regression_word2vec.pkl
+models/naive_bayes_tf_idf.pkl
+models/naive_bayes_word2vec.pkl
+models/random_forest_tf_idf.pkl
+models/random_forest_word2vec.pkl
+models/support_vector_machine_word2vec.pkl
+models/word2vec_model.bin

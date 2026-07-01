@@ -1,0 +1,177 @@
+{
+    "active_model": {
+        "model_name": "Support Vector Machine",
+        "vectorizer_name": "TF-IDF",
+        "f1_score": 0.9169675090252708,
+        "model_filename": "support_vector_machine_tf_idf.pkl",
+        "vectorizer_filename": "tfidf_vectorizer.pkl"
+    },
+    "all_models": [
+        {
+            "model_name": "Logistic Regression",
+            "vectorizer_name": "TF-IDF",
+            "accuracy": 0.9649595687331537,
+            "precision": 0.9741379310344828,
+            "recall": 0.7583892617449665,
+            "f1_score": 0.8528301886792453,
+            "confusion_matrix": [
+                [
+                    961,
+                    3
+                ],
+                [
+                    36,
+                    113
+                ]
+            ],
+            "model_filename": "logistic_regression_tf_idf.pkl",
+            "vectorizer_filename": "tfidf_vectorizer.pkl"
+        },
+        {
+            "model_name": "Naive Bayes",
+            "vectorizer_name": "TF-IDF",
+            "accuracy": 0.9748427672955975,
+            "precision": 1.0,
+            "recall": 0.8120805369127517,
+            "f1_score": 0.8962962962962963,
+            "confusion_matrix": [
+                [
+                    964,
+                    0
+                ],
+                [
+                    28,
+                    121
+                ]
+            ],
+            "model_filename": "naive_bayes_tf_idf.pkl",
+            "vectorizer_filename": "tfidf_vectorizer.pkl"
+        },
+        {
+            "model_name": "Support Vector Machine",
+            "vectorizer_name": "TF-IDF",
+            "accuracy": 0.9793351302785265,
+            "precision": 0.9921875,
+            "recall": 0.8523489932885906,
+            "f1_score": 0.9169675090252708,
+            "confusion_matrix": [
+                [
+                    963,
+                    1
+                ],
+                [
+                    22,
+                    127
+                ]
+            ],
+            "model_filename": "support_vector_machine_tf_idf.pkl",
+            "vectorizer_filename": "tfidf_vectorizer.pkl"
+        },
+        {
+            "model_name": "Random Forest",
+            "vectorizer_name": "TF-IDF",
+            "accuracy": 0.9757412398921833,
+            "precision": 1.0,
+            "recall": 0.8187919463087249,
+            "f1_score": 0.9003690036900369,
+            "confusion_matrix": [
+                [
+                    964,
+                    0
+                ],
+                [
+                    27,
+                    122
+                ]
+            ],
+            "model_filename": "random_forest_tf_idf.pkl",
+            "vectorizer_filename": "tfidf_vectorizer.pkl"
+        },
+        {
+            "model_name": "Logistic Regression",
+            "vectorizer_name": "Word2Vec",
+            "accuracy": 0.9182389937106918,
+            "precision": 0.881578947368421,
+            "recall": 0.44966442953020136,
+            "f1_score": 0.5955555555555555,
+            "confusion_matrix": [
+                [
+                    955,
+                    9
+                ],
+                [
+                    82,
+                    67
+                ]
+            ],
+            "model_filename": "logistic_regression_word2vec.pkl",
+            "vectorizer_filename": "word2vec_model.bin"
+        },
+        {
+            "model_name": "Naive Bayes",
+            "vectorizer_name": "Word2Vec",
+            "accuracy": 0.6217430368373764,
+            "precision": 0.24045801526717558,
+            "recall": 0.8456375838926175,
+            "f1_score": 0.37444279346210996,
+            "confusion_matrix": [
+                [
+                    566,
+                    398
+                ],
+                [
+                    23,
+                    126
+                ]
+            ],
+            "model_filename": "naive_bayes_word2vec.pkl",
+            "vectorizer_filename": "word2vec_model.bin"
+        },
+        {
+            "model_name": "Support Vector Machine",
+            "vectorizer_name": "Word2Vec",
+            "accuracy": 0.9344115004492363,
+            "precision": 0.9523809523809523,
+            "recall": 0.5369127516778524,
+            "f1_score": 0.6866952789699571,
+            "confusion_matrix": [
+                [
+                    960,
+                    4
+                ],
+                [
+                    69,
+                    80
+                ]
+            ],
+            "model_filename": "support_vector_machine_word2vec.pkl",
+            "vectorizer_filename": "word2vec_model.bin"
+        },
+        {
+            "model_name": "Random Forest",
+            "vectorizer_name": "Word2Vec",
+            "accuracy": 0.9640610961365679,
+            "precision": 0.9037037037037037,
+            "recall": 0.8187919463087249,
+            "f1_score": 0.8591549295774648,
+            "confusion_matrix": [
+                [
+                    951,
+                    13
+                ],
+                [
+                    27,
+                    122
+                ]
+            ],
+            "model_filename": "random_forest_word2vec.pkl",
+            "vectorizer_filename": "word2vec_model.bin"
+        }
+    ],
+    "dataset_stats": {
+        "total": 5563,
+        "spam": 747,
+        "ham": 4816,
+        "spam_percentage": 13.43
+    }
+}

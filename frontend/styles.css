@@ -1,0 +1,114 @@
+/* ==========================================================
+   DESIGN SYSTEM & THEME CUSTOMIZATIONS (SaaS Dark Mode)
+   This stylesheet overrides Streamlit's default container styles
+   to deliver a premium, high-end, responsive dark theme.
+   ========================================================== */
+
+/* Import Outfit and Inter Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+/* FontAwesome CDN Link is loaded inside app.py */
+
+/* Global Typographical Overrides */
+html, body, [class*="css"] {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #e5e7eb;
+}
+
+/* Headings Styling */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', sans-serif !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+}
+
+/* Custom CSS classes for HTML injection */
+
+/* Glow animations for cards */
+.kpi-card {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(99, 102, 241, 0.15);
+}
+
+/* Premium gradient headers */
+.gradient-text {
+    background: linear-gradient(to right, #6366f1, #a855f7, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+}
+
+/* Custom stats section grid layout */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin: 15px 0;
+}
+
+/* Customizing standard Streamlit buttons to feel like SaaS buttons */
+div.stButton > button {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+    color: #ffffff !important;
+    font-family: 'Outfit', sans-serif !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    border: none !important;
+    padding: 10px 24px !important;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3) !important;
+    transition: all 0.3s ease !important;
+    width: 100%;
+}
+
+div.stButton > button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5) !important;
+    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+}
+
+div.stButton > button:active {
+    transform: translateY(0) !important;
+}
+
+/* Clear History (Danger button) override */
+.clear-btn button {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3) !important;
+}
+
+.clear-btn button:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5) !important;
+}
+
+/* Sidebar Custom Styling */
+section[data-testid="stSidebar"] {
+    background-color: #0b0f19 !important;
+    border-right: 1px solid #1f2937 !important;
+}
+
+/* Streamlit App Background */
+.stApp {
+    background-color: #0f1322 !important;
+}
+
+/* Form styling overrides */
+div[data-testid="stForm"] {
+    background: #161c2e !important;
+    border: 1px solid #2d3748 !important;
+    border-radius: 12px !important;
+    padding: 24px !important;
+}
+
+/* Progress bar customizations */
+div[data-testid="stMarkdownContainer"] p {
+    margin-bottom: 0px !important;
+}
+
+.stProgress > div > div > div > div {
+    background-color: #6366f1 !important;
+}
