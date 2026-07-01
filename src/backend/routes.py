@@ -15,7 +15,6 @@ from src.backend.schemas import (
     SystemStatsResponse
 )
 from src.ml_engine.models import SpamClassifier
-from src.ml_engine.trainer import ModelTrainer
 from src.database.repository import PredictionRepository
 
 logger = logging.getLogger(__name__)
@@ -46,6 +45,7 @@ def get_classifier() -> SpamClassifier:
     # If the project is clean and models aren't trained, let's train them automatically!
     if not metadata_path.exists():
         logger.info("Metadata file not found. Auto-triggering model training pipeline...")
+        from src.ml_engine.trainer import ModelTrainer
         trainer = ModelTrainer()
         trainer.train_and_compare()
 
@@ -163,6 +163,7 @@ def get_model_comparison():
     metadata_path = MODEL_DIR / "metadata.json"
     if not metadata_path.exists():
         # Trigger training to generate comparison data if missing
+        from src.ml_engine.trainer import ModelTrainer
         trainer = ModelTrainer()
         trainer.train_and_compare()
 
@@ -183,6 +184,7 @@ def background_train_task():
     global _classifier
     logger.info("Background retraining started.")
     try:
+        from src.ml_engine.trainer import ModelTrainer
         trainer = ModelTrainer()
         trainer.train_and_compare()
         # Reset classifier to force reloading the newly trained active model

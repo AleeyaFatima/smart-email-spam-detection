@@ -1,7 +1,6 @@
 import logging
 import numpy as np
 import joblib
-from gensim.models import Word2Vec
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 logger = logging.getLogger(__name__)
@@ -88,6 +87,7 @@ class Word2VecVectorizerWrapper:
         Trains the custom Word2Vec neural embedding map on our email dataset.
         It learns to group similar words together in a 100-dimensional space.
         """
+        from gensim.models import Word2Vec
         tokenized_emails = self._tokenize_emails(X)
         logger.info("Training custom Word2Vec model...")
         self.w2v_model = Word2Vec(
@@ -147,6 +147,7 @@ class Word2VecVectorizerWrapper:
         """
         Loads the Word2Vec model from disk.
         """
+        from gensim.models import Word2Vec
         self.w2v_model = Word2Vec.load(str(filepath))
         logger.info(f"Word2Vec model loaded from {filepath}")
         return self

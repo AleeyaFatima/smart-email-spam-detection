@@ -508,9 +508,75 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Mobile Responsive Utilities */
+        .mobile-toggle-btn {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+                overflow: auto;
+                height: auto;
+            }
+
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: -280px;
+                height: 100vh;
+                box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+                transition: var(--transition);
+                z-index: 10000;
+            }
+
+            .sidebar.active {
+                left: 0;
+            }
+
+            .mobile-toggle-btn {
+                display: block !important;
+            }
+
+            .topbar {
+                padding: 0 15px;
+                position: sticky;
+                top: 0;
+                z-index: 90;
+            }
+
+            .workspace {
+                height: auto;
+                overflow: visible;
+                min-height: 100vh;
+            }
+
+            .content-area {
+                padding: 15px;
+                overflow-y: visible;
+            }
+
+            .kpis-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .kpis-grid {
+                grid-template-columns: 1fr;
+            }
+            .status-badge {
+                padding: 4px 8px;
+                font-size: 0.7rem;
+            }
+        }
     </style>
 </head>
 <body>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebarOverlay" onclick="toggleSidebar(false)" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999; cursor: pointer;"></div>
 
     <!-- SIDEBAR -->
     <aside class="sidebar">
@@ -587,7 +653,12 @@
     <main class="workspace">
         <!-- TOPBAR -->
         <header class="topbar">
-            <h2 id="pageTitle" style="font-family: 'Outfit', sans-serif;">Dashboard</h2>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button class="mobile-toggle-btn" onclick="toggleSidebar()" style="display: none; background: none; border: none; color: var(--cream); font-size: 1.5rem; cursor: pointer; padding: 5px; outline: none;">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <h2 id="pageTitle" style="font-family: 'Outfit', sans-serif; font-size: 1.4rem;">Dashboard</h2>
+            </div>
             <div class="status-badge" id="apiStatus">
                 <span class="dot"></span>
                 <span id="apiStatusText">REST API: ONLINE</span>
@@ -1173,6 +1244,11 @@
         };
 
         function switchTab(tabId) {
+            // Close sidebar on mobile
+            if (window.innerWidth <= 768) {
+                toggleSidebar(false);
+            }
+
             // Deactivate all menus & contents
             document.querySelectorAll('.menu-link').forEach(link => link.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -1197,6 +1273,23 @@
                 loadModelComparisons();
             } else if (tabId === 'stats') {
                 loadStatsView();
+            }
+        }
+
+        function toggleSidebar(forceState) {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (!sidebar || !overlay) return;
+            
+            const isOpen = sidebar.classList.contains('active');
+            const nextState = (typeof forceState === 'boolean') ? forceState : !isOpen;
+            
+            if (nextState) {
+                sidebar.classList.add('active');
+                overlay.style.display = 'block';
+            } else {
+                sidebar.classList.remove('active');
+                overlay.style.display = 'none';
             }
         }
 
