@@ -17,11 +17,16 @@ logger = logging.getLogger(__name__)
 # ==========================================
 
 class TFIDFVectorizerWrapper:
-    def __init__(self, max_features=3000):
+    def __init__(self, max_features=5000):
         """
         TF-IDF counts how often words appear, but penalizes extremely common words (like 'the').
+        We use bi-grams and sublinear term frequency to capture multi-word combinations.
         """
-        self.vectorizer = TfidfVectorizer(max_features=max_features)
+        self.vectorizer = TfidfVectorizer(
+            max_features=max_features,
+            ngram_range=(1, 2),
+            sublinear_tf=True
+        )
         self.name = "TF-IDF"
 
     def fit(self, X):

@@ -98,6 +98,21 @@ class APIClient:
         """
         return self._post("/api/models/train")
 
+    def upload_dataset(self, file_bytes: bytes, filename: str, mode: str = "overwrite") -> Dict[str, Any]:
+        """
+        Uploads a labeled dataset to the backend for retraining.
+        """
+        url = f"{self.base_url}/api/dataset/upload"
+        try:
+            files = {"file": (filename, file_bytes, "text/csv")}
+            params = {"mode": mode}
+            response = requests.post(url, files=files, params=params, timeout=60)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            logger.error(f"POST request to {url} failed: {e}")
+            raise ConnectionError(f"Cannot connect to Backend API. Please ensure the server is running on {self.base_url}.")
+
     def clear_history(self) -> Dict[str, Any]:
         """
         Deletes all history logs in the SQLite database.

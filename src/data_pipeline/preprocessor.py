@@ -77,8 +77,10 @@ class EmailPreprocessor:
         # 4. Clean Email Addresses (e.g., test@example.com)
         text = re.sub(r"\S+@\S+", " ", text)
 
-        # 5. Remove numbers (digits)
-        text = re.sub(r"\d+", " ", text)
+        # 5. Preserve special markers for spam signals (currency, exclamation, numbers)
+        text = re.sub(r"[\$\£\€]", " moneytoken ", text)
+        text = re.sub(r"\!", " exclamationtoken ", text)
+        text = re.sub(r"\d+", " numbertoken ", text)
 
         # 6. Remove Punctuation (e.g., !, ?, ., ,)
         # string.punctuation is a list of punctuation characters like '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'

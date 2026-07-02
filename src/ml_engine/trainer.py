@@ -65,16 +65,16 @@ class ModelTrainer:
         # GaussianNB handles dense real-valued coordinates (like Word2Vec) beautifully.
         models_config = {
             "TF-IDF": {
-                "Logistic Regression": LogisticRegression(random_state=42, max_iter=1000),
+                "Logistic Regression": LogisticRegression(random_state=42, max_iter=1000, class_weight="balanced"),
                 "Naive Bayes": MultinomialNB(),
-                "Support Vector Machine": SVC(random_state=42, probability=True),
-                "Random Forest": RandomForestClassifier(random_state=42, n_estimators=100)
+                "Support Vector Machine": SVC(random_state=42, probability=True, class_weight="balanced"),
+                "Random Forest": RandomForestClassifier(random_state=42, n_estimators=100, class_weight="balanced")
             },
             "Word2Vec": {
-                "Logistic Regression": LogisticRegression(random_state=42, max_iter=1000),
+                "Logistic Regression": LogisticRegression(random_state=42, max_iter=1000, class_weight="balanced"),
                 "Naive Bayes": GaussianNB(),
-                "Support Vector Machine": SVC(random_state=42, probability=True),
-                "Random Forest": RandomForestClassifier(random_state=42, n_estimators=100)
+                "Support Vector Machine": SVC(random_state=42, probability=True, class_weight="balanced"),
+                "Random Forest": RandomForestClassifier(random_state=42, n_estimators=100, class_weight="balanced")
             }
         }
 

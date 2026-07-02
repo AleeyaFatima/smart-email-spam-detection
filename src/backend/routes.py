@@ -1,10 +1,12 @@
 import logging
 import json
+import shutil
+import tempfile
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File
 from typing import List, Optional
 
-from src.config import MODEL_DIR
+from src.config import MODEL_DIR, RAW_DATA_PATH, PROCESSED_DATA_PATH
 from src.backend.schemas import (
     EmailInput,
     PredictionResponse,
@@ -202,6 +204,148 @@ def train_models(background_tasks: BackgroundTasks):
     """
     background_tasks.add_task(background_train_task)
     return {"status": "success", "message": "Model training pipeline triggered in background."}
+
+
+@router.post("/dataset/upload")
+def upload_dataset(file: UploadFile = File(...), mode: str = "overwrite"):
+    """
+    Uploads a new training dataset (CSV or TSV format).
+    mode can be:
+    - 'overwrite': replaces the current spam_dataset.csv
+    - 'append': appends new rows to the current spam_dataset.csv
+    """
+    try:
+        import pandas as pd
+        
+        # Save uploaded file to a temporary file first to validate it
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
+        temp_path = Path(temp_file.name)
+        
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        # Try parsing it to check if it's valid
+        # We read first few lines to check delimiter
+        try:
+            with open(temp_path, "r", encoding="utf-8", errors="ignore") as f:
+                first_line = f.readline()
+            sep = "\t" if "\t" in first_line else ","
+            
+            # Use raw column check
+            df_new = pd.read_csv(temp_path, sep=sep, encoding="utf-8", on_bad_lines="skip")
+            
+            # Check columns
+            cols = [c.lower().strip() for c in df_new.columns]
+            label_candidates = {"label", "v1", "class", "target", "spam", "category"}
+            text_candidates = {"text", "v2", "message", "email", "body", "sms"}
+            
+            label_col = None
+            text_col = None
+            for idx, col in enumerate(cols):
+                if col in label_candidates:
+                    label_col = df_new.columns[idx]
+                elif col in text_candidates:
+                    text_col = df_new.columns[idx]
+                    
+            if label_col is None or text_col is None:
+                # Let's check if we can read it without headers
+                df_no_header = pd.read_csv(temp_path, sep=sep, header=None, encoding="utf-8", on_bad_lines="skip")
+                if len(df_no_header.columns) >= 2:
+                    # Use first column as label, second as text
+                    df_new = df_no_header.rename(columns={0: "label", 1: "text"})
+                else:
+                    raise ValueError("Uploaded file must have at least 2 columns: label and text content.")
+            else:
+                df_new = df_new.rename(columns={label_col: "label", text_col: "text"})
+                
+            df_new = df_new[["label", "text"]]
+            
+        except Exception as parse_err:
+            try:
+                temp_path.unlink()
+            except OSError:
+                pass
+            raise HTTPException(status_code=400, detail=f"Failed to parse CSV/TSV format: {str(parse_err)}")
+        
+        # Standardize labels
+        df_new["label"] = df_new["label"].astype(str).str.lower().str.strip()
+        df_new["label"] = df_new["label"].replace({
+            "1": "spam", "0": "ham", 
+            "1.0": "spam", "0.0": "ham",
+            "yes": "spam", "no": "ham",
+            "true": "spam", "false": "ham",
+            "positive": "spam", "negative": "ham"
+        })
+        df_new = df_new[df_new["label"].isin(["spam", "ham"])]
+        
+        if len(df_new) == 0:
+            try:
+                temp_path.unlink()
+            except OSError:
+                pass
+            raise HTTPException(status_code=400, detail="No valid rows containing 'spam' or 'ham' labels were found.")
+            
+        # Append or Overwrite
+        if mode == "append" and RAW_DATA_PATH.exists():
+            try:
+                # Read existing with separator detection
+                with open(RAW_DATA_PATH, "r", encoding="utf-8", errors="ignore") as f:
+                    ex_first = f.readline()
+                ex_sep = "\t" if "\t" in ex_first else ","
+                
+                df_ex_check = pd.read_csv(RAW_DATA_PATH, sep=ex_sep, nrows=5, header=None)
+                ex_first_row = [str(val).lower().strip() for val in df_ex_check.iloc[0]]
+                ex_has_header = any(col in label_candidates or col in text_candidates for col in ex_first_row)
+                
+                if ex_has_header:
+                    df_existing = pd.read_csv(RAW_DATA_PATH, sep=ex_sep, encoding="utf-8", on_bad_lines="skip")
+                    rename_dict = {}
+                    for idx, col in enumerate(df_existing.columns):
+                        c_low = col.lower().strip()
+                        if c_low in label_candidates:
+                            rename_dict[col] = "label"
+                        elif c_low in text_candidates:
+                            rename_dict[col] = "text"
+                    df_existing = df_existing.rename(columns=rename_dict)[["label", "text"]]
+                else:
+                    df_existing = pd.read_csv(RAW_DATA_PATH, sep=ex_sep, names=["label", "text"], header=None, encoding="utf-8", on_bad_lines="skip")
+                    df_existing = df_existing[["label", "text"]]
+                    
+                df_merged = pd.concat([df_existing, df_new], ignore_index=True)
+            except Exception as ex_err:
+                logger.warning(f"Failed to load existing dataset for append: {ex_err}. Treating as overwrite.")
+                df_merged = df_new
+        else:
+            df_merged = df_new
+            
+        # Save as tab-separated with no headers, to be consistent with raw format
+        df_merged.dropna(subset=["label", "text"], inplace=True)
+        df_merged.to_csv(RAW_DATA_PATH, sep="\t", index=False, header=False)
+        
+        # Clean up temp file
+        try:
+            temp_path.unlink()
+        except OSError:
+            pass
+            
+        # Remove processed dataset to force reloading
+        if PROCESSED_DATA_PATH.exists():
+            try:
+                PROCESSED_DATA_PATH.unlink()
+            except OSError:
+                pass
+            
+        return {
+            "status": "success",
+            "message": f"Successfully uploaded dataset containing {len(df_new)} records. Total training pool is now {len(df_merged)} records.",
+            "total_records": len(df_merged),
+            "uploaded_records": len(df_new)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to upload training dataset: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/history", response_model=List[HistoryRecord])

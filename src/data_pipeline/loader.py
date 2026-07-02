@@ -85,20 +85,78 @@ class DataLoader:
         """
         Loads the raw dataset, runs the clean preprocessor on all text,
         saves the cleaned data to a CSV, and returns the Pandas DataFrame.
+        Supports standard and custom formats (CSV/TSV, headers/no headers).
         """
         self.download_dataset()
 
-        logger.info("Loading raw dataset...")
-        # Read the tab-separated dataset. The raw dataset doesn't have headers, 
-        # so we name the columns "label" and "text".
-        df = pd.read_csv(RAW_DATA_PATH, sep="\t", names=["label", "text"], header=None, encoding="utf-8", on_bad_lines="skip")
+        logger.info(f"Loading raw dataset from {RAW_DATA_PATH}...")
+        
+        # 1. Determine separator and headers dynamically
+        try:
+            # Read first line to detect separator
+            with open(RAW_DATA_PATH, "r", encoding="utf-8", errors="ignore") as f:
+                first_line = f.readline()
+            
+            sep = "\t" if "\t" in first_line else ","
+            
+            # Read first row as potential header
+            df_header_check = pd.read_csv(RAW_DATA_PATH, sep=sep, nrows=5, header=None, encoding="utf-8")
+            
+            # Check if there are column names that look like labels/texts
+            first_row = [str(val).lower().strip() for val in df_header_check.iloc[0]]
+            
+            has_header = False
+            label_col = None
+            text_col = None
+            
+            label_candidates = {"label", "v1", "class", "target", "spam", "category"}
+            text_candidates = {"text", "v2", "message", "email", "body", "sms"}
+            
+            for idx, col in enumerate(first_row):
+                if col in label_candidates:
+                    has_header = True
+                    label_col = idx
+                elif col in text_candidates:
+                    has_header = True
+                    text_col = idx
+            
+            if has_header:
+                df = pd.read_csv(RAW_DATA_PATH, sep=sep, encoding="utf-8", on_bad_lines="skip")
+                col_names = list(df.columns)
+                rename_dict = {}
+                if label_col is not None:
+                    rename_dict[col_names[label_col]] = "label"
+                if text_col is not None:
+                    rename_dict[col_names[text_col]] = "text"
+                df = df.rename(columns=rename_dict)
+                df = df[["label", "text"]]
+            else:
+                # No header found, default to first columns: 0 is label, 1 is text
+                df = pd.read_csv(RAW_DATA_PATH, sep=sep, names=["label", "text"], header=None, encoding="utf-8", on_bad_lines="skip")
+                df = df[["label", "text"]]
+                
+        except Exception as e:
+            logger.error(f"Error reading dataset file: {e}. Falling back to default tab-separated format.")
+            df = pd.read_csv(RAW_DATA_PATH, sep="\t", names=["label", "text"], header=None, encoding="utf-8", on_bad_lines="skip")
+            df = df[["label", "text"]]
+
+        # Clean labels to be exactly 'spam' or 'ham'
+        df["label"] = df["label"].astype(str).str.lower().str.strip()
+        df["label"] = df["label"].replace({
+            "1": "spam", "0": "ham", 
+            "1.0": "spam", "0.0": "ham",
+            "yes": "spam", "no": "ham",
+            "true": "spam", "false": "ham",
+            "positive": "spam", "negative": "ham"
+        })
+        df = df[df["label"].isin(["spam", "ham"])]
         
         # Drop rows with empty messages or labels
         df = df.dropna(subset=["label", "text"])
 
         logger.info("Preprocessing text data (this may take a moment)...")
         # Apply the preprocessor clean_text function to every email text
-        df["clean_text"] = df["text"].apply(self.preprocessor.preprocess)
+        df["clean_text"] = df["text"].astype(str).apply(self.preprocessor.preprocess)
 
         # Drop empty preprocessed rows (e.g. if an email had only stopwords/punctuation)
         df = df[df["clean_text"] != ""]

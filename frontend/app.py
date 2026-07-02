@@ -180,11 +180,35 @@ if "Dashboard Overview" in nav_selection:
                 )
 
             # Charts section (Spam distribution and logs history)
-            st.markdown("<h3 style='margin: 30px 0 15px 0;'>Database Scan Analytics</h3>", unsafe_allow_html=True)
-            col_chart1, col_chart2 = st.columns([1, 2])
+            st.markdown("<h3 style='margin: 30px 0 15px 0;'>System Data & Scan Analytics</h3>", unsafe_allow_html=True)
+            col_chart1, col_chart2, col_chart3 = st.columns(3)
             
             with col_chart1:
-                # Donut chart for Spam vs Ham
+                st.markdown("<h5 style='text-align: center; color: #f0ede4;'>Training Dataset Distribution</h5>", unsafe_allow_html=True)
+                train_stats = metadata.get("dataset_stats", {})
+                if train_stats and train_stats.get("total", 0) > 0:
+                    fig_train = px.pie(
+                        names=["Safe (Ham)", "Spam"],
+                        values=[train_stats.get("ham", 0), train_stats.get("spam", 0)],
+                        hole=0.5,
+                        color_discrete_sequence=["#10b981", "#ef4444"],
+                    )
+                    fig_train.update_layout(
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        plot_bgcolor="rgba(0,0,0,0)",
+                        font_color="#ffffff",
+                        showlegend=True,
+                        legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
+                        margin=dict(t=10, b=10, l=10, r=10),
+                        height=280
+                    )
+                    st.plotly_chart(fig_train, use_container_width=True)
+                else:
+                    st.info("No training dataset stats found.")
+                    
+            with col_chart2:
+                st.markdown("<h5 style='text-align: center; color: #f0ede4;'>Live Scan Logs Distribution</h5>", unsafe_allow_html=True)
+                # Donut chart for Spam vs Ham in history logs
                 if stats["total_scans"] > 0:
                     fig_donut = px.pie(
                         names=["Safe (Ham)", "Spam"],
@@ -203,9 +227,10 @@ if "Dashboard Overview" in nav_selection:
                     )
                     st.plotly_chart(fig_donut, use_container_width=True)
                 else:
-                    st.info("No data in history database to show charts.")
+                    st.info("No logs in database yet. Scan some emails to show charts.")
                     
-            with col_chart2:
+            with col_chart3:
+                st.markdown("<h5 style='text-align: center; color: #f0ede4;'>Scanner Certainty Trend</h5>", unsafe_allow_html=True)
                 # Line chart representing scan confidence level trends
                 history_scans = stats.get("history_scans", [])
                 if history_scans:
@@ -233,7 +258,7 @@ if "Dashboard Overview" in nav_selection:
                     )
                     st.plotly_chart(fig_line, use_container_width=True)
                 else:
-                    st.info("No logs trends available yet. Scan some emails to populate charts.")
+                    st.info("No logs trends available yet. Scan emails to populate chart.")
 
             # Display currently active model
             st.markdown("<h3 style='margin: 30px 0 15px 0;'>Production ML Model Node</h3>", unsafe_allow_html=True)
@@ -502,17 +527,57 @@ elif "Model Comparison" in nav_selection:
 
             # 3. Retraining control panel
             st.markdown("<hr style='border-color: #1f2937; margin: 30px 0;'>", unsafe_allow_html=True)
-            st.markdown("### Admin Control Panel: Retrain Pipeline")
-            st.write(
-                "Clicking the button below will trigger a background task to rebuild and re-evaluate "
-                "all 8 model combinations on the active training splits. The system will automatically "
-                "designate the best-performing model based on F1-score once complete."
-            )
+            st.markdown("### Admin Control Panel: Model Training & Dataset Upload")
             
-            if st.button("🔄 Trigger Model Training Pipeline"):
-                with st.spinner("Instructing training node..."):
-                    res = client.retrain_models()
-                    st.success("SUCCESS: Model training has been successfully scheduled in the background. It will rebuild metrics in a few seconds.")
+            col_retrain, col_upload = st.columns(2)
+            
+            with col_retrain:
+                st.markdown("#### Quick Retrain")
+                st.write(
+                    "Retrain all 8 model combinations using the current training dataset pool on the server. "
+                    "The system will automatically select the best model based on F1-score once complete."
+                )
+                if st.button("🔄 Trigger Model Training Pipeline"):
+                    with st.spinner("Instructing training node..."):
+                        try:
+                            res = client.retrain_models()
+                            st.success("SUCCESS: Model training has been successfully scheduled in the background. It will rebuild metrics in a few seconds.")
+                        except Exception as e:
+                            st.error(f"Failed to trigger retraining: {e}")
+                            
+            with col_upload:
+                st.markdown("#### Upload Labeled Dataset")
+                st.write(
+                    "Upload a labeled CSV/TSV dataset to update the model training pool. "
+                    "The file must contain text and labels (spam/ham)."
+                )
+                
+                training_file = st.file_uploader("Choose training dataset file", type=["csv", "tsv"])
+                upload_mode = st.selectbox("Upload Mode", ["overwrite", "append"], help="Overwrite replaces the current dataset; Append adds new data to it.")
+                
+                if st.button("📤 Upload & Retrain Models"):
+                    if training_file is not None:
+                        file_bytes = training_file.read()
+                        with st.spinner("Uploading and parsing dataset..."):
+                            try:
+                                # 1. Upload to API
+                                upload_res = client.upload_dataset(
+                                    file_bytes=file_bytes,
+                                    filename=training_file.name,
+                                    mode=upload_mode
+                                )
+                                st.success(upload_res.get("message", "Dataset uploaded successfully."))
+                                
+                                # 2. Retrain
+                                with st.spinner("Rebuilding machine learning models..."):
+                                    client.retrain_models()
+                                    st.success("Models retrained successfully! Reloading stats.")
+                                    st.rerun()
+                                    
+                            except Exception as e:
+                                st.error(f"Error: {e}")
+                    else:
+                        st.warning("Please select a valid CSV or TSV file to upload.")
                     
         except Exception as e:
             st.error(f"Error loading model comparisons: {e}")

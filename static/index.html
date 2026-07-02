@@ -837,27 +837,28 @@
             <!-- TAB: DATASET STATISTICS -->
             <div id="tab-stats" class="tab-content">
                 <div class="primary-card">
-                    <h2 class="section-title"><i class="fa-solid fa-chart-column"></i> Dataset Statistics & Insights</h2>
-                    <p style="color: var(--text-muted); margin-bottom: 20px;">Overall data metrics computed from training files and active audit logs.</p>
+                    <h2 class="section-title"><i class="fa-solid fa-chart-pie"></i> Dataset Statistics & Insights</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 20px;">Overall data metrics computed from training splits and live scan history logs.</p>
                     
                     <div class="charts-row">
                         <div class="primary-card" style="margin: 0; background: var(--bg-card);">
-                            <h3 style="font-family:'Outfit',sans-serif; margin-bottom: 15px;">Classifier Run Counts by Model Node</h3>
-                            <div style="height: 250px;">
-                                <canvas id="modelBarChart"></canvas>
+                            <h3 style="font-family:'Outfit',sans-serif; margin-bottom: 15px; text-align: center; color: var(--cream);">Training Dataset Composition</h3>
+                            <div style="height: 220px; position: relative;">
+                                <canvas id="trainDatasetDonutChart"></canvas>
+                            </div>
+                            <div style="margin-top: 15px; text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+                                <span>Total Pool: <b id="train-total-val" style="color: var(--cream);">0</b></span> | 
+                                <span>Spam Ratio: <b id="train-spam-pct" style="color: #ef4444;">0%</b></span>
                             </div>
                         </div>
                         <div class="primary-card" style="margin: 0; background: var(--bg-card);">
-                            <h3 style="font-family:'Outfit',sans-serif; margin-bottom: 15px;">Database Volume Ratios</h3>
-                            <div style="display:flex; justify-content:space-around; align-items:center; height:250px;">
-                                <div style="text-align:center;">
-                                    <h4 style="font-size:2.5rem; color:#ef4444;" id="stat-spam-total">0</h4>
-                                    <div style="font-size:0.8rem; color:var(--text-muted);">TOTAL SPAM BLOCKED</div>
-                                </div>
-                                <div style="text-align:center;">
-                                    <h4 style="font-size:2.5rem; color:#10b981;" id="stat-ham-total">0</h4>
-                                    <div style="font-size:0.8rem; color:var(--text-muted);">TOTAL LEgitimate SCANS</div>
-                                </div>
+                            <h3 style="font-family:'Outfit',sans-serif; margin-bottom: 15px; text-align: center; color: var(--cream);">Live Scan History Ratios</h3>
+                            <div style="height: 220px; position: relative;">
+                                <canvas id="liveHistoryDonutChart"></canvas>
+                            </div>
+                            <div style="margin-top: 15px; text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+                                <span>Total Scans: <b id="live-total-val" style="color: var(--cream);">0</b></span> | 
+                                <span>Spam Ratio: <b id="live-spam-pct" style="color: #ef4444;">0%</b></span>
                             </div>
                         </div>
                     </div>
@@ -893,9 +894,30 @@
 
                     <!-- Retraining block -->
                     <div style="margin-top: 35px; border-top: 1px solid var(--border-color); padding-top: 25px;">
-                        <h3>Re-train ML Pipeline</h3>
-                        <p style="color:var(--text-muted); font-size:0.9rem; margin-top:5px; margin-bottom:15px;">Click below to retrain all 8 combinations. The platform will automatically updates the active route based on the highest F1-score.</p>
-                        <button class="btn" onclick="triggerRetraining()"><i class="fa-solid fa-arrows-rotate" id="retrainIcon"></i> Retrain System Models</button>
+                        <div class="charts-row" style="margin-bottom: 0;">
+                            <div class="primary-card" style="margin: 0; background: var(--bg-card);">
+                                <h3>Re-train ML Pipeline</h3>
+                                <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px; margin-bottom:15px;">Rebuild and re-evaluate all 8 model configurations using the current active training pool on the server.</p>
+                                <button class="btn" onclick="triggerRetraining()"><i class="fa-solid fa-arrows-rotate" id="retrainIcon"></i> Retrain System Models</button>
+                            </div>
+                            <div class="primary-card" style="margin: 0; background: var(--bg-card);">
+                                <h3>Upload Labeled Training Dataset</h3>
+                                <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px; margin-bottom:10px;">Upload custom spam/ham data. File must contain text and label fields.</p>
+                                
+                                <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                                    <div style="flex: 1; min-width: 120px;">
+                                        <select id="trainUploadMode" style="padding: 6px 12px; font-size: 0.85rem;">
+                                            <option value="overwrite">Overwrite Dataset</option>
+                                            <option value="append">Append to Dataset</option>
+                                        </select>
+                                    </div>
+                                    <div style="flex: 1.5; min-width: 180px;">
+                                        <input type="file" id="trainFileInput" accept=".csv,.tsv" style="font-size: 0.8rem; background: transparent; border: none; padding: 5px 0;">
+                                    </div>
+                                </div>
+                                <button class="btn" onclick="uploadTrainingDataset()"><i class="fa-solid fa-cloud-arrow-up" id="trainUploadIcon"></i> Upload & Retrain</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1501,6 +1523,38 @@
         // ==========================================
         let uploadedRowsData = [];
 
+        function parseCSVLines(text) {
+            let rows = [];
+            let row = [""];
+            let inQuotes = false;
+            for (let i = 0; i < text.length; i++) {
+                let c = text[i];
+                let next = text[i+1];
+                if (c === '"') {
+                    if (inQuotes && next === '"') {
+                        row[row.length - 1] += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (c === ',' && !inQuotes) {
+                    row.push("");
+                } else if ((c === '\r' || c === '\n') && !inQuotes) {
+                    if (c === '\r' && next === '\n') {
+                        i++;
+                    }
+                    rows.push(row);
+                    row = [""];
+                } else {
+                    row[row.length - 1] += c;
+                }
+            }
+            if (row.length > 1 || row[0] !== "") {
+                rows.push(row);
+            }
+            return rows;
+        }
+
         function handleCSVUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -1508,15 +1562,15 @@
             const reader = new FileReader();
             reader.onload = function(evt) {
                 const text = evt.target.result;
-                const lines = text.split('\n');
+                const rows = parseCSVLines(text);
                 
-                // Parse CSV rows simple
-                uploadedRowsData = [];
-                let headers = [];
-                
-                if (lines.length > 0) {
-                    headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+                if (rows.length === 0) {
+                    showToast("Uploaded file is empty", true);
+                    return;
                 }
+                
+                // Clean headers to look for 'text' column
+                const headers = rows[0].map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''));
                 
                 const textIndex = headers.indexOf('text');
                 const idIndex = headers.indexOf('id');
@@ -1526,16 +1580,16 @@
                     return;
                 }
 
-                for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (!line) continue;
+                uploadedRowsData = [];
+                for (let i = 1; i < rows.length; i++) {
+                    const row = rows[i];
+                    if (row.length <= textIndex) continue;
                     
-                    const cols = line.split(',');
-                    const rowText = cols[textIndex];
-                    const rowId = idIndex !== -1 ? cols[idIndex] : String(i);
+                    const rowText = row[textIndex].trim();
+                    const rowId = (idIndex !== -1 && row.length > idIndex) ? row[idIndex].trim() : String(i);
                     
                     if (rowText) {
-                        uploadedRowsData.push({ id: rowId, text: rowText.replace(/^"|"$/g, '').trim() });
+                        uploadedRowsData.push({ id: rowId, text: rowText });
                     }
                 }
 
@@ -1622,49 +1676,90 @@
         // ==========================================
         // DATASET STATISTICS PAGE
         // ==========================================
+        let trainDatasetDonutInstance = null;
+        let liveHistoryDonutInstance = null;
+
         async function loadStatsView() {
             const health = await checkApiHealth();
             if (!health) return;
 
             try {
-                const res = await fetch(`${host}/api/history/stats`);
-                const data = await res.json();
+                // 1. Fetch History stats
+                const historyRes = await fetch(`${host}/api/history/stats`);
+                const historyData = await historyRes.json();
 
-                document.getElementById('stat-spam-total').innerText = data.total_spam;
-                document.getElementById('stat-ham-total').innerText = data.total_ham;
+                // 2. Fetch Training comparisons (which has training dataset stats)
+                const compareRes = await fetch(`${host}/api/models/compare`);
+                const compareData = await compareRes.json();
+                const trainStats = compareData.dataset_stats || { total: 0, spam: 0, ham: 0, spam_percentage: 0 };
 
-                renderModelBarChart(data.model_stats);
+                // 3. Render Training Dataset Donut Chart
+                renderTrainingDatasetDonut(trainStats.ham, trainStats.spam);
+                document.getElementById('train-total-val').innerText = trainStats.total;
+                document.getElementById('train-spam-pct').innerText = `${trainStats.spam_percentage}%`;
+
+                // 4. Render Live History Donut Chart
+                renderLiveHistoryDonut(historyData.total_ham, historyData.total_spam);
+                document.getElementById('live-total-val').innerText = historyData.total_scans;
+                document.getElementById('live-spam-pct').innerText = `${historyData.spam_percentage}%`;
+
             } catch (e) {
                 showToast("Failed to fetch statistics datasets", true);
             }
         }
 
-        function renderModelBarChart(modelStats) {
-            const canvasCtx = document.getElementById('modelBarChart').getContext('2d');
-            if (modelBarChartInstance) modelBarChartInstance.destroy();
+        function renderTrainingDatasetDonut(ham, spam) {
+            const canvasCtx = document.getElementById('trainDatasetDonutChart').getContext('2d');
+            if (trainDatasetDonutInstance) trainDatasetDonutInstance.destroy();
 
-            const labels = Object.keys(modelStats);
-            const values = Object.values(modelStats);
-
-            modelBarChartInstance = new Chart(canvasCtx, {
-                type: 'bar',
+            trainDatasetDonutInstance = new Chart(canvasCtx, {
+                type: 'doughnut',
                 data: {
-                    labels: labels,
+                    labels: ['Safe (Ham)', 'Spam'],
                     datasets: [{
-                        data: values,
-                        backgroundColor: '#004741',
-                        borderColor: '#f0ede4',
-                        borderWidth: 1
+                        data: [ham, spam],
+                        backgroundColor: ['#10b981', '#ef4444'],
+                        borderWidth: 1,
+                        borderColor: '#0a1f1c'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: {
-                        x: { grid: { display: false }, ticks: { color: '#f0ede4' } },
-                        y: { grid: { color: 'rgba(240,237,228,0.1)' }, ticks: { color: '#f0ede4', precision: 0 } }
-                    },
-                    plugins: { legend: { display: false } }
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#f0ede4', font: { family: 'Inter', size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderLiveHistoryDonut(ham, spam) {
+            const canvasCtx = document.getElementById('liveHistoryDonutChart').getContext('2d');
+            if (liveHistoryDonutInstance) liveHistoryDonutInstance.destroy();
+
+            liveHistoryDonutInstance = new Chart(canvasCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Safe (Ham)', 'Spam'],
+                    datasets: [{
+                        data: [ham, spam],
+                        backgroundColor: ['#10b981', '#ef4444'],
+                        borderWidth: 1,
+                        borderColor: '#0a1f1c'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#f0ede4', font: { family: 'Inter', size: 11 } }
+                        }
+                    }
                 }
             });
         }
@@ -1761,6 +1856,57 @@
                 showToast("Failed to run retraining pipeline", true);
             } finally {
                 setTimeout(() => { icon.classList.remove('fa-spin'); }, 2000);
+            }
+        }
+
+        async function uploadTrainingDataset() {
+            const fileInput = document.getElementById('trainFileInput');
+            const mode = document.getElementById('trainUploadMode').value;
+            const icon = document.getElementById('trainUploadIcon');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showToast("Please choose a CSV/TSV file to upload", true);
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append("file", file);
+            
+            icon.className = 'fa-solid fa-circle-notch fa-spin';
+            showToast("Uploading dataset and retraining...");
+            
+            try {
+                // 1. Upload the file
+                const uploadRes = await fetch(`${host}/api/dataset/upload?mode=${mode}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!uploadRes.ok) {
+                    const errorData = await uploadRes.json();
+                    throw new Error(errorData.detail || "Upload failed");
+                }
+                
+                const uploadData = await uploadRes.json();
+                showToast(uploadData.message);
+                
+                // 2. Trigger retraining
+                const retrainRes = await fetch(`${host}/api/models/train`, { method: 'POST' });
+                const retrainData = await retrainRes.json();
+                
+                if (retrainData.status === 'success') {
+                    showToast("Pipeline retraining triggered. Reloading comparisons shortly.");
+                    setTimeout(() => {
+                        loadModelComparisons();
+                        // Reset file input
+                        fileInput.value = "";
+                    }, 4000);
+                }
+            } catch (e) {
+                showToast(e.message || "Failed to upload and retrain", true);
+            } finally {
+                icon.className = 'fa-solid fa-cloud-arrow-up';
             }
         }
 
